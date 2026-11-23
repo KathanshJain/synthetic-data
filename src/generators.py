@@ -74,7 +74,8 @@ def train_ctgan(seed_df, config, random_state):
           f"epochs={epochs} (total {total_steps} steps)")
 
     synthesizer = CTGANSynthesizer(
-        make_metadata(seed_df, *get_column_types_for_metadata(seed_df)),
+        make_metadata(seed_df,
+                      *get_column_types_for_metadata(seed_df, config)),
         batch_size=batch_size,
         epochs=epochs,
         enable_gpu=config["generators"]["ctgan"]["use_gpu"],
@@ -100,9 +101,14 @@ def train_ctgan(seed_df, config, random_state):
     return synthesizer, training_seconds, losses
 
 
-def get_column_types_for_metadata(seed_df):
-    """Numerical, categorical and target column lists for metadata."""
-    config = load_config()
+def get_column_types_for_metadata(seed_df, config=None):
+    """Numerical, categorical and target column lists for metadata.
+
+    `config` lets callers (like the API lab) pass their OWN dataset config
+    — e.g. a user-uploaded CSV has a different target column than the
+    experiment's. Falls back to the global config for the batch pipeline.
+    """
+    config = config if config is not None else load_config()
     target = config["dataset"]["target"]
     numerical_cols, categorical_cols = get_column_types(seed_df, target)
     return numerical_cols, categorical_cols, target
@@ -113,7 +119,8 @@ def train_gaussian_copula(seed_df, config, random_state):
     from sdv.single_table import GaussianCopulaSynthesizer
 
     synthesizer = GaussianCopulaSynthesizer(
-        make_metadata(seed_df, *get_column_types_for_metadata(seed_df)))
+        make_metadata(seed_df,
+                      *get_column_types_for_metadata(seed_df, config)))
     start_time = time.time()
     synthesizer.fit({"data": seed_df.drop(columns=["row_id"])})
     return synthesizer, time.time() - start_time

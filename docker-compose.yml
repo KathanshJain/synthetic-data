@@ -1,0 +1,12 @@
+# Runs the API + built frontend in one container; artefacts are mounted so
+# the image itself stays small and the results stay on the host.
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./results:/app/results
+      - ./data:/app/data
+      - ./reports:/app/reports
+    restart: unless-stopped

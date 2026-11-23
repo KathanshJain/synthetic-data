@@ -20,6 +20,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+from src.seeds import build_nested_seeds
 from src.utils import PROJECT_ROOT, get_column_types, load_config, load_criteria
 
 RESULTS_DIR = PROJECT_ROOT / "results"
@@ -557,6 +558,87 @@ def make_findings(summary, fidelity_summary, privacy_summary,
     return findings
 
 
+def export_fidelity_chi2(dev_pool, config):
+    """
+    Export mean chi-square per (generator, seed size, random seed) to
+    results/fidelity_chi2.csv. The API serves this as chi2_mean in the
+    fidelity summary; chi-square is exported here (not computed ad hoc in
+    the API) so every served number comes from src/.
+    """
+    from src.fidelity import chi_square_per_column
+    target = config["dataset"]["target"]
+    numerical_cols, categorical_cols = get_column_types(dev_pool, target)
+    rows = []
+    for random_seed in config["seeds"]["random_seeds"]:
+        for seed_size in config["seeds"]["seed_sizes"]:
+            for prefix, generator in [("ctgan", "CTGAN"),
+                                      ("gc", "GaussianCopula")]:
+                synth_path = (PROJECT_ROOT / "data" / "synthetic" /
+                              f"rs{random_seed}" / f"{prefix}_{seed_size}.csv")
+                if not synth_path.exists():
+                    continue
+                synth_df = pd.read_csv(synth_path)
+                chi_table = chi_square_per_column(dev_pool, synth_df,
+                                                  categorical_cols)
+                rows.append({
+                    "random_seed": random_seed,
+                    "seed_size": seed_size,
+                    "generator": generator,
+                    "chi2_mean": round(float(chi_table["chi2"].mean()), 2),
+                })
+    pd.DataFrame(rows).to_csv(RESULTS_DIR / "fidelity_chi2.csv", index=False)
+    return len(rows)
+
+
+def export_dcr_histograms(dev_pool, config, n_bins=40):
+    """
+    Export DCR distance histograms per (generator, seed size, random seed)
+    to results/dcr_histograms.csv so the API can serve the histogram
+    without recomputing nearest-neighbour distances on request.
+    """
+    from src.privacy import compute_dcr_distances
+    from src.seeds import get_holdout
+    target = config["dataset"]["target"]
+    numerical_cols, categorical_cols = get_column_types(dev_pool, target)
+    rows = []
+    for random_seed in config["seeds"]["random_seeds"]:
+        seeds = build_nested_seeds(dev_pool, target,
+                                   config["seeds"]["seed_sizes"], random_seed)
+        largest_seed = seeds[max(seeds)]
+        holdout = get_holdout(dev_pool, largest_seed,
+                              config["dcr"]["holdout_size"], random_seed)
+        for seed_size in config["seeds"]["seed_sizes"]:
+            seed_df = seeds[seed_size]
+            for prefix, generator in [("ctgan", "CTGAN"),
+                                      ("gc", "GaussianCopula")]:
+                synth_path = (PROJECT_ROOT / "data" / "synthetic" /
+                              f"rs{random_seed}" / f"{prefix}_{seed_size}.csv")
+                if not synth_path.exists():
+                    continue
+                synth_df = pd.read_csv(synth_path)
+                synth_distances, holdout_distances = compute_dcr_distances(
+                    seed_df, synth_df, holdout, numerical_cols, categorical_cols)
+                low = min(synth_distances.min(), holdout_distances.min())
+                high = max(synth_distances.max(), holdout_distances.max())
+                if high <= low:
+                    high = low + 1e-9
+                edges = np.linspace(low, high, n_bins + 1)
+                synth_counts, _ = np.histogram(synth_distances, bins=edges)
+                holdout_counts, _ = np.histogram(holdout_distances, bins=edges)
+                for i in range(n_bins):
+                    rows.append({
+                        "random_seed": random_seed,
+                        "seed_size": seed_size,
+                        "generator": generator,
+                        "bin_left": round(float(edges[i]), 6),
+                        "bin_right": round(float(edges[i + 1]), 6),
+                        "synthetic_count": int(synth_counts[i]),
+                        "holdout_count": int(holdout_counts[i]),
+                    })
+    pd.DataFrame(rows).to_csv(RESULTS_DIR / "dcr_histograms.csv", index=False)
+    return len(rows)
+
+
 def main():
     config = load_config()
     metrics_path = RESULTS_DIR / "metrics.csv"
@@ -601,6 +683,11 @@ def main():
                      findings, refresh_comparison)
 
     summary.to_csv(RESULTS_DIR / "summary.csv", index=False)
+
+    # exports the API and report consume (never computed ad hoc in the API)
+    n_chi2 = export_fidelity_chi2(dev_pool, config)
+    n_hist = export_dcr_histograms(dev_pool, config)
+    print(f"Exported {n_chi2} chi2 rows and {n_hist} histogram bins")
 
     # one generated source of truth for every number the report/viva need
     # (test-set counts come from the manifest — the locked CSV is not read here)

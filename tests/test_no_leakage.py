@@ -41,6 +41,18 @@ def source_files():
             for p in SRC.glob("*.py")}
 
 
+def api_source_files():
+    """
+    Every file under api/ — with NO exceptions. The API serves results and
+    runs the lab; it must never even mention the locked test file. Its only
+    permitted interaction is verify_test_hash() (a True/False hash check),
+    which none of the LOCKED_PATTERNS match.
+    """
+    api_dir = PROJECT_ROOT / "api"
+    return {str(p.relative_to(PROJECT_ROOT)): p.read_text(encoding="utf-8")
+            for p in api_dir.rglob("*.py")}
+
+
 def test_only_approved_files_reference_locked_test():
     sources = source_files()
     for file_name, source in sources.items():
@@ -53,6 +65,19 @@ def test_only_approved_files_reference_locked_test():
             assert not real_matches, (
                 f"{file_name} references the locked test set "
                 f"(pattern '{pattern}'). Only {sorted(ALLOWED_FILES)} may.")
+
+
+def test_api_never_references_locked_test():
+    """
+    NOTHING under api/ may reference the locked test set — no exceptions.
+    The API reads manifest.json (counts/hash string) and calls
+    verify_test_hash() for a verified true/false; it never loads the CSV.
+    """
+    for file_name, source in api_source_files().items():
+        for pattern in LOCKED_PATTERNS:
+            assert not re.findall(pattern, source), (
+                f"{file_name} references the locked test set "
+                f"(pattern '{pattern}'). The API must never touch it.")
 
 
 def test_no_generator_or_encoder_fitted_on_test_data():

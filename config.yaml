@@ -45,3 +45,19 @@ quick_mode:             # a fast smoke-test of the full pipeline
   random_seeds: [0]
   ctgan_total_training_steps: 200
   synthetic_rows: 1000
+
+api:                    # settings for the FastAPI service (api/)
+  version: "1.0.0"
+  cors_origins:         # the Vite dev server origins allowed to call the API
+    - http://localhost:5173
+    - http://localhost:4173
+    - http://127.0.0.1:5173
+  max_upload_mb: 20         # largest CSV upload accepted in the lab
+  max_upload_rows: 200000   # largest CSV (by rows) accepted in the lab
+  ctgan_steps_max: 3000     # clamp for the lab's CTGAN steps slider
+  job_ttl_minutes: 120      # lab uploads/jobs auto-delete after this long
+  rate_limit: "60/minute"   # general per-IP limit
+  lab_rate_limit: "10/minute" # per-IP limit on lab upload/run
+  max_projection_points: 800    # per side in /compare/projection
+  histogram_bins: 40            # bins in the exported DCR histograms
+  comparison_bins: 30           # bins in /compare/distribution

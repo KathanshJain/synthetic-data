@@ -64,8 +64,9 @@ synthetic-data-project/
   data/seeds/            nested stratified seeds per random seed
   data/synthetic/        generated synthetic CSVs
   src/                   all pipeline code
+  api/                   FastAPI service (serves results + interactive lab)
   frontend/web/          React web app (Vite + TypeScript)
-  tests/                 pytest tests (split, seeds, fidelity, leakage)
+  tests/                 pytest tests (split, seeds, fidelity, leakage, API)
   results/               metrics.csv, fidelity.csv, privacy.csv, RESULTS.md
   figures/               all plots
   reports/               eda_report.md
@@ -108,8 +109,50 @@ results with the fix applied.
 | 8c. Refresh (re-run with NaN repair) | `python -m src.run_experiment --refresh` | archives old results to results/archive_v1/, re-runs same pipeline |
 | 8d. Backfill per-column fidelity | `python -m src.backfill_fidelity_per_column` | results/fidelity_per_column.csv |
 | 9. Analysis | `python -m src.analyze` | figures/results/, results/RESULTS.md, reports/report_facts.json |
-| 10. Web app | `cd frontend/web && npm run dev` | local web app (React + Vite) |
+| 9b. Test-status cache | `python -m scripts.run_checks` | results/checks.json (read by /health) |
+| 10. Both servers | `python -m scripts.dev` (or `run.bat`) | API on :8000 + web app on :5173 |
+| 10b. API only | `venv\Scripts\python -m uvicorn api.main:app --port 8000` | API at http://localhost:8000 (docs at /docs) |
+| 10c. Web app only | `cd frontend/web && npm run dev` | local web app (React + Vite) |
 | Tests | `python -m pytest` | test report |
+
+## The Backend (api/)
+
+The React frontend talks to a FastAPI service that **wraps `src/`** — it
+never re-implements the pipeline and never loads the locked test set (its
+only interaction with it is `verify_test_hash()` → a verified true/false;
+counts come from `manifest.json`). All numbers are served from
+`results/*.csv`, `reports/report_facts.json` and `manifest.json` — nothing
+is invented or estimated. Endpoints (mounted under `/api` and at the root):
+
+| Endpoint | Serves |
+|---|---|
+| `GET /health` | status + cached pytest summary (results/checks.json) |
+| `GET /overview` | dataset story + locked-set hash status |
+| `GET /dataset/distribution?column=` | real-data distribution for one column |
+| `GET /seeds` | seed sizes, random seeds, nested-split check, class counts |
+| `GET /results/summary?model=` | per-arm metric means/stds |
+| `GET /results/reference` | TRTR-full reference + random-guess PR-AUC |
+| `GET /results/fidelity` | fidelity summary (KS/TVD/chi2/corr/coverage) + per-column |
+| `GET /results/privacy` | DCR summary (median/p05/ratio/exact rates) |
+| `GET /results/privacy/histogram` | DCR histogram for one run |
+| `GET /results/runtime` | generator training seconds |
+| `GET /results/loss-curve` | CTGAN loss trace (only exists after a `--refresh` run) |
+| `GET /results/criteria` | frozen criteria rules + pass/fail table |
+| `GET /compare/distribution\|correlation\|projection` | real-vs-synthetic comparisons (PCA fitted on real only) |
+| `POST /lab/upload` | profile an uploaded CSV (rate-limited) |
+| `POST /lab/run` | start a lab job (one CTGAN at a time; staged progress) |
+| `GET /lab/jobs/{id}` + `/events` | poll or SSE-stream job status |
+| `GET /lab/jobs/{id}/download` | the job's synthetic CSV |
+
+Every error uses `{"error": {code, message, hint}}`. The frontend switches
+from mock data to the live API via `frontend/web/.env`
+(`VITE_USE_MOCKS=false`, `VITE_API_URL=http://localhost:8000`). The API
+type contract is exported to `api/openapi.json` and rendered to
+`frontend/web/src/api/types.generated.ts` with openapi-typescript.
+
+For production, `api/main.py` also serves the built frontend
+(`frontend/web/dist`) at `/`, so one process hosts everything; see
+`Dockerfile` / `docker-compose.yml`.
 
 ## Results (full experiment: 3 random seeds × 5 seed sizes, locked test set)
 

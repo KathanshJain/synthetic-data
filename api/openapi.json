@@ -1,0 +1,2504 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Forged Data API",
+    "description": "Serves the Machine Learning on Artificially Forged Data study: results, comparisons and the interactive lab.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "summary": "Health",
+        "description": "Liveness + the cached test summary from scripts/run_checks.py.",
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/overview": {
+      "get": {
+        "summary": "Overview",
+        "description": "Dataset story + locked-test-set status (hash check, never its rows).",
+        "operationId": "overview_api_overview_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Overview"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/seeds": {
+      "get": {
+        "summary": "Seeds",
+        "description": "Seed sizes, random seeds, nested-split proof and class counts.",
+        "operationId": "seeds_api_seeds_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Seeds"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dataset/distribution": {
+      "get": {
+        "summary": "Distribution",
+        "description": "Real-data-only distribution of one column (for the data snapshot).",
+        "operationId": "distribution_api_dataset_distribution_get",
+        "parameters": [
+          {
+            "name": "column",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Column name",
+              "title": "Column"
+            },
+            "description": "Column name"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Distribution"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/results/summary": {
+      "get": {
+        "summary": "Summary",
+        "description": "Per-arm summary for one model (metric means/stds across runs).",
+        "operationId": "summary_api_results_summary_get",
+        "parameters": [
+          {
+            "name": "model",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "xgboost or random_forest",
+              "title": "Model"
+            },
+            "description": "xgboost or random_forest"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SummaryItem"
+                  },
+                  "title": "Response Summary Api Results Summary Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/results/reference": {
+      "get": {
+        "summary": "Reference",
+        "description": "TRTR-full reference metrics per model + random-guess PR-AUC.",
+        "operationId": "reference_api_results_reference_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Reference"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/results/fidelity": {
+      "get": {
+        "summary": "Fidelity",
+        "description": "Fidelity summary (KS/TVD/chi2/correlation/coverage) + per-column.",
+        "operationId": "fidelity_api_results_fidelity_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fidelity"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/results/privacy": {
+      "get": {
+        "summary": "Privacy",
+        "description": "DCR summary averaged over random seeds.",
+        "operationId": "privacy_api_results_privacy_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PrivacyItem"
+                  },
+                  "type": "array",
+                  "title": "Response Privacy Api Results Privacy Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/results/privacy/histogram": {
+      "get": {
+        "summary": "Privacy Histogram",
+        "description": "DCR distance histogram for one (generator, size, seed) run.",
+        "operationId": "privacy_histogram_api_results_privacy_histogram_get",
+        "parameters": [
+          {
+            "name": "generator",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Generator"
+            }
+          },
+          {
+            "name": "seed_size",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Seed Size"
+            }
+          },
+          {
+            "name": "random_seed",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Random Seed"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DcrHistogram"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/results/runtime": {
+      "get": {
+        "summary": "Runtime",
+        "description": "Generator training seconds by generator and seed size.",
+        "operationId": "runtime_api_results_runtime_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RuntimeItem"
+                  },
+                  "type": "array",
+                  "title": "Response Runtime Api Results Runtime Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/results/loss-curve": {
+      "get": {
+        "summary": "Loss Curve",
+        "description": "CTGAN loss curve for one run (exists only after a --refresh run).",
+        "operationId": "loss_curve_api_results_loss_curve_get",
+        "parameters": [
+          {
+            "name": "seed_size",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Seed Size"
+            }
+          },
+          {
+            "name": "random_seed",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Random Seed"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LossCurve"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/results/criteria": {
+      "get": {
+        "summary": "Criteria",
+        "description": "Frozen criteria rules + the pass/fail table (computed by src/).",
+        "operationId": "criteria_api_results_criteria_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Criteria"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/compare/distribution": {
+      "get": {
+        "summary": "Compare Distribution",
+        "description": "Shared-bin / shared-category real vs synthetic counts for a column.",
+        "operationId": "compare_distribution_api_compare_distribution_get",
+        "parameters": [
+          {
+            "name": "column",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Column"
+            }
+          },
+          {
+            "name": "generator",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Generator"
+            }
+          },
+          {
+            "name": "seed_size",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Seed Size"
+            }
+          },
+          {
+            "name": "random_seed",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Random Seed"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Comparison"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/compare/correlation": {
+      "get": {
+        "summary": "Compare Correlation",
+        "description": "Pearson matrices (real vs synthetic) + absolute difference.",
+        "operationId": "compare_correlation_api_compare_correlation_get",
+        "parameters": [
+          {
+            "name": "generator",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Generator"
+            }
+          },
+          {
+            "name": "seed_size",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Seed Size"
+            }
+          },
+          {
+            "name": "random_seed",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Random Seed"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Correlation"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/compare/projection": {
+      "get": {
+        "summary": "Compare Projection",
+        "description": "PCA(2) fitted on real only, \u2264 max_projection_points per side.",
+        "operationId": "compare_projection_api_compare_projection_get",
+        "parameters": [
+          {
+            "name": "generator",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Generator"
+            }
+          },
+          {
+            "name": "seed_size",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Seed Size"
+            }
+          },
+          {
+            "name": "random_seed",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Random Seed"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Projection"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lab/upload": {
+      "post": {
+        "summary": "Upload Dataset",
+        "description": "Profile an uploaded CSV and store it for lab runs (TTL applies).",
+        "operationId": "upload_dataset_api_lab_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_dataset_api_lab_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Upload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lab/run": {
+      "post": {
+        "summary": "Run Lab",
+        "description": "Start a lab job; returns {job_id} immediately (202-style contract).",
+        "operationId": "run_lab_api_lab_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lab/jobs/{job_id}": {
+      "get": {
+        "summary": "Job Status",
+        "description": "Poll a lab job's status, stage, progress, log and result.",
+        "operationId": "job_status_api_lab_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lab/jobs/{job_id}/events": {
+      "get": {
+        "summary": "Job Events",
+        "description": "Server-Sent Events stream of job snapshots until the job finishes.",
+        "operationId": "job_events_api_lab_jobs__job_id__events_get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lab/jobs/{job_id}/download": {
+      "get": {
+        "summary": "Job Download",
+        "description": "Download the synthetic CSV produced by a completed job.",
+        "operationId": "job_download_api_lab_jobs__job_id__download_get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "description": "Liveness + the cached test summary from scripts/run_checks.py.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/overview": {
+      "get": {
+        "summary": "Overview",
+        "description": "Dataset story + locked-test-set status (hash check, never its rows).",
+        "operationId": "overview_overview_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Overview"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/seeds": {
+      "get": {
+        "summary": "Seeds",
+        "description": "Seed sizes, random seeds, nested-split proof and class counts.",
+        "operationId": "seeds_seeds_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Seeds"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dataset/distribution": {
+      "get": {
+        "summary": "Distribution",
+        "description": "Real-data-only distribution of one column (for the data snapshot).",
+        "operationId": "distribution_dataset_distribution_get",
+        "parameters": [
+          {
+            "name": "column",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "Column name",
+              "title": "Column"
+            },
+            "description": "Column name"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Distribution"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/results/summary": {
+      "get": {
+        "summary": "Summary",
+        "description": "Per-arm summary for one model (metric means/stds across runs).",
+        "operationId": "summary_results_summary_get",
+        "parameters": [
+          {
+            "name": "model",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "description": "xgboost or random_forest",
+              "title": "Model"
+            },
+            "description": "xgboost or random_forest"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SummaryItem"
+                  },
+                  "title": "Response Summary Results Summary Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/results/reference": {
+      "get": {
+        "summary": "Reference",
+        "description": "TRTR-full reference metrics per model + random-guess PR-AUC.",
+        "operationId": "reference_results_reference_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Reference"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/results/fidelity": {
+      "get": {
+        "summary": "Fidelity",
+        "description": "Fidelity summary (KS/TVD/chi2/correlation/coverage) + per-column.",
+        "operationId": "fidelity_results_fidelity_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fidelity"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/results/privacy": {
+      "get": {
+        "summary": "Privacy",
+        "description": "DCR summary averaged over random seeds.",
+        "operationId": "privacy_results_privacy_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PrivacyItem"
+                  },
+                  "type": "array",
+                  "title": "Response Privacy Results Privacy Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/results/privacy/histogram": {
+      "get": {
+        "summary": "Privacy Histogram",
+        "description": "DCR distance histogram for one (generator, size, seed) run.",
+        "operationId": "privacy_histogram_results_privacy_histogram_get",
+        "parameters": [
+          {
+            "name": "generator",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Generator"
+            }
+          },
+          {
+            "name": "seed_size",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Seed Size"
+            }
+          },
+          {
+            "name": "random_seed",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Random Seed"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DcrHistogram"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/results/runtime": {
+      "get": {
+        "summary": "Runtime",
+        "description": "Generator training seconds by generator and seed size.",
+        "operationId": "runtime_results_runtime_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RuntimeItem"
+                  },
+                  "type": "array",
+                  "title": "Response Runtime Results Runtime Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/results/loss-curve": {
+      "get": {
+        "summary": "Loss Curve",
+        "description": "CTGAN loss curve for one run (exists only after a --refresh run).",
+        "operationId": "loss_curve_results_loss_curve_get",
+        "parameters": [
+          {
+            "name": "seed_size",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Seed Size"
+            }
+          },
+          {
+            "name": "random_seed",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Random Seed"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LossCurve"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/results/criteria": {
+      "get": {
+        "summary": "Criteria",
+        "description": "Frozen criteria rules + the pass/fail table (computed by src/).",
+        "operationId": "criteria_results_criteria_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Criteria"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/compare/distribution": {
+      "get": {
+        "summary": "Compare Distribution",
+        "description": "Shared-bin / shared-category real vs synthetic counts for a column.",
+        "operationId": "compare_distribution_compare_distribution_get",
+        "parameters": [
+          {
+            "name": "column",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Column"
+            }
+          },
+          {
+            "name": "generator",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Generator"
+            }
+          },
+          {
+            "name": "seed_size",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Seed Size"
+            }
+          },
+          {
+            "name": "random_seed",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Random Seed"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Comparison"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/compare/correlation": {
+      "get": {
+        "summary": "Compare Correlation",
+        "description": "Pearson matrices (real vs synthetic) + absolute difference.",
+        "operationId": "compare_correlation_compare_correlation_get",
+        "parameters": [
+          {
+            "name": "generator",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Generator"
+            }
+          },
+          {
+            "name": "seed_size",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Seed Size"
+            }
+          },
+          {
+            "name": "random_seed",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Random Seed"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Correlation"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/compare/projection": {
+      "get": {
+        "summary": "Compare Projection",
+        "description": "PCA(2) fitted on real only, \u2264 max_projection_points per side.",
+        "operationId": "compare_projection_compare_projection_get",
+        "parameters": [
+          {
+            "name": "generator",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Generator"
+            }
+          },
+          {
+            "name": "seed_size",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Seed Size"
+            }
+          },
+          {
+            "name": "random_seed",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Random Seed"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Projection"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lab/upload": {
+      "post": {
+        "summary": "Upload Dataset",
+        "description": "Profile an uploaded CSV and store it for lab runs (TTL applies).",
+        "operationId": "upload_dataset_lab_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_dataset_lab_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Upload"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lab/run": {
+      "post": {
+        "summary": "Run Lab",
+        "description": "Start a lab job; returns {job_id} immediately (202-style contract).",
+        "operationId": "run_lab_lab_run_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lab/jobs/{job_id}": {
+      "get": {
+        "summary": "Job Status",
+        "description": "Poll a lab job's status, stage, progress, log and result.",
+        "operationId": "job_status_lab_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lab/jobs/{job_id}/events": {
+      "get": {
+        "summary": "Job Events",
+        "description": "Server-Sent Events stream of job snapshots until the job finishes.",
+        "operationId": "job_events_lab_jobs__job_id__events_get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lab/jobs/{job_id}/download": {
+      "get": {
+        "summary": "Job Download",
+        "description": "Download the synthetic CSV produced by a completed job.",
+        "operationId": "job_download_lab_jobs__job_id__download_get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Body_upload_dataset_api_lab_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_dataset_api_lab_upload_post"
+      },
+      "Body_upload_dataset_lab_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_dataset_lab_upload_post"
+      },
+      "Comparison": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "bins": {
+            "anyOf": [
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    }
+                  ]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bins"
+          },
+          "categories": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categories"
+          },
+          "real": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Real"
+          },
+          "synthetic": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Synthetic"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "real",
+          "synthetic"
+        ],
+        "title": "Comparison"
+      },
+      "Correlation": {
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "real": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Real"
+          },
+          "synthetic": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Synthetic"
+          },
+          "diff": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Diff"
+          }
+        },
+        "type": "object",
+        "required": [
+          "columns",
+          "real",
+          "synthetic",
+          "diff"
+        ],
+        "title": "Correlation"
+      },
+      "Criteria": {
+        "properties": {
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/CriteriaRule"
+            },
+            "type": "array",
+            "title": "Rules"
+          },
+          "evaluations": {
+            "items": {
+              "$ref": "#/components/schemas/CriteriaEvaluation"
+            },
+            "type": "array",
+            "title": "Evaluations"
+          },
+          "min_useful_seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Useful Seed"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rules",
+          "evaluations",
+          "min_useful_seed",
+          "explanation"
+        ],
+        "title": "Criteria"
+      },
+      "CriteriaEvaluation": {
+        "properties": {
+          "generator": {
+            "type": "string",
+            "title": "Generator"
+          },
+          "seed_size": {
+            "type": "integer",
+            "title": "Seed Size"
+          },
+          "values": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Values"
+          },
+          "passed": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "type": "object",
+            "title": "Passed"
+          },
+          "all_passed": {
+            "type": "boolean",
+            "title": "All Passed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "generator",
+          "seed_size",
+          "values",
+          "passed",
+          "all_passed"
+        ],
+        "title": "CriteriaEvaluation"
+      },
+      "CriteriaRule": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "threshold": {
+            "type": "number",
+            "title": "Threshold"
+          },
+          "direction": {
+            "type": "string",
+            "title": "Direction"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "threshold",
+          "direction"
+        ],
+        "title": "CriteriaRule"
+      },
+      "DcrHistogram": {
+        "properties": {
+          "bins": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Bins"
+          },
+          "synthetic": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Synthetic"
+          },
+          "holdout": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Holdout"
+          }
+        },
+        "type": "object",
+        "required": [
+          "bins",
+          "synthetic",
+          "holdout"
+        ],
+        "title": "DcrHistogram"
+      },
+      "Distribution": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "bins": {
+            "anyOf": [
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    }
+                  ]
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bins"
+          },
+          "categories": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Categories"
+          },
+          "counts": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Counts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "counts"
+        ],
+        "title": "Distribution"
+      },
+      "FeatureInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "unique": {
+            "type": "integer",
+            "title": "Unique"
+          },
+          "missing_pct": {
+            "type": "number",
+            "title": "Missing Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "type",
+          "unique",
+          "missing_pct"
+        ],
+        "title": "FeatureInfo"
+      },
+      "Fidelity": {
+        "properties": {
+          "overall": {
+            "items": {
+              "$ref": "#/components/schemas/FidelityOverallItem"
+            },
+            "type": "array",
+            "title": "Overall"
+          },
+          "per_column": {
+            "items": {
+              "$ref": "#/components/schemas/FidelityPerColumnItem"
+            },
+            "type": "array",
+            "title": "Per Column"
+          }
+        },
+        "type": "object",
+        "required": [
+          "overall",
+          "per_column"
+        ],
+        "title": "Fidelity"
+      },
+      "FidelityOverallItem": {
+        "properties": {
+          "generator": {
+            "type": "string",
+            "title": "Generator"
+          },
+          "seed_size": {
+            "type": "integer",
+            "title": "Seed Size"
+          },
+          "ks_mean": {
+            "type": "number",
+            "title": "Ks Mean"
+          },
+          "tvd_mean": {
+            "type": "number",
+            "title": "Tvd Mean"
+          },
+          "chi2_mean": {
+            "type": "number",
+            "title": "Chi2 Mean"
+          },
+          "corr_diff": {
+            "type": "number",
+            "title": "Corr Diff"
+          },
+          "coverage": {
+            "type": "number",
+            "title": "Coverage"
+          },
+          "stds": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Stds"
+          }
+        },
+        "type": "object",
+        "required": [
+          "generator",
+          "seed_size",
+          "ks_mean",
+          "tvd_mean",
+          "chi2_mean",
+          "corr_diff",
+          "coverage",
+          "stds"
+        ],
+        "title": "FidelityOverallItem"
+      },
+      "FidelityPerColumnItem": {
+        "properties": {
+          "generator": {
+            "type": "string",
+            "title": "Generator"
+          },
+          "seed_size": {
+            "type": "integer",
+            "title": "Seed Size"
+          },
+          "column": {
+            "type": "string",
+            "title": "Column"
+          },
+          "metric": {
+            "type": "string",
+            "title": "Metric"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "generator",
+          "seed_size",
+          "column",
+          "metric",
+          "value"
+        ],
+        "title": "FidelityPerColumnItem"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Health": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "tests_passing": {
+            "type": "integer",
+            "title": "Tests Passing"
+          },
+          "tests_total": {
+            "type": "integer",
+            "title": "Tests Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "version",
+          "tests_passing",
+          "tests_total"
+        ],
+        "title": "Health"
+      },
+      "Job": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "stage": {
+            "type": "string",
+            "title": "Stage"
+          },
+          "progress": {
+            "type": "integer",
+            "title": "Progress"
+          },
+          "log": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Log"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "stage",
+          "progress",
+          "log",
+          "result",
+          "error"
+        ],
+        "title": "Job"
+      },
+      "LabRunRequest": {
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "title": "Dataset Id"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target"
+          },
+          "seed_size": {
+            "type": "integer",
+            "maximum": 100000.0,
+            "minimum": 50.0,
+            "title": "Seed Size"
+          },
+          "generator": {
+            "type": "string",
+            "enum": [
+              "CTGAN",
+              "GaussianCopula",
+              "SMOTE-NC"
+            ],
+            "title": "Generator"
+          },
+          "synthetic_rows": {
+            "type": "integer",
+            "maximum": 100000.0,
+            "minimum": 100.0,
+            "title": "Synthetic Rows"
+          },
+          "ctgan_steps": {
+            "type": "integer",
+            "maximum": 3000.0,
+            "minimum": 100.0,
+            "title": "Ctgan Steps"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dataset_id",
+          "target",
+          "seed_size",
+          "generator",
+          "synthetic_rows",
+          "ctgan_steps"
+        ],
+        "title": "LabRunRequest"
+      },
+      "LockedInfo": {
+        "properties": {
+          "sha256": {
+            "type": "string",
+            "title": "Sha256"
+          },
+          "verified": {
+            "type": "boolean",
+            "title": "Verified"
+          },
+          "created": {
+            "type": "string",
+            "title": "Created"
+          },
+          "n_rows": {
+            "type": "integer",
+            "title": "N Rows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sha256",
+          "verified",
+          "created",
+          "n_rows"
+        ],
+        "title": "LockedInfo"
+      },
+      "LossCurve": {
+        "properties": {
+          "step": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Step"
+          },
+          "generator_loss": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Generator Loss"
+          },
+          "discriminator_loss": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Discriminator Loss"
+          }
+        },
+        "type": "object",
+        "required": [
+          "step",
+          "generator_loss",
+          "discriminator_loss"
+        ],
+        "title": "LossCurve"
+      },
+      "Overview": {
+        "properties": {
+          "rows_raw": {
+            "type": "integer",
+            "title": "Rows Raw"
+          },
+          "duplicates_removed": {
+            "type": "integer",
+            "title": "Duplicates Removed"
+          },
+          "rows_clean": {
+            "type": "integer",
+            "title": "Rows Clean"
+          },
+          "dev_rows": {
+            "type": "integer",
+            "title": "Dev Rows"
+          },
+          "test_rows": {
+            "type": "integer",
+            "title": "Test Rows"
+          },
+          "positive_rate_dev": {
+            "type": "number",
+            "title": "Positive Rate Dev"
+          },
+          "positive_rate_test": {
+            "type": "number",
+            "title": "Positive Rate Test"
+          },
+          "n_features": {
+            "type": "integer",
+            "title": "N Features"
+          },
+          "n_numerical": {
+            "type": "integer",
+            "title": "N Numerical"
+          },
+          "n_categorical": {
+            "type": "integer",
+            "title": "N Categorical"
+          },
+          "features": {
+            "items": {
+              "$ref": "#/components/schemas/FeatureInfo"
+            },
+            "type": "array",
+            "title": "Features"
+          },
+          "locked": {
+            "$ref": "#/components/schemas/LockedInfo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rows_raw",
+          "duplicates_removed",
+          "rows_clean",
+          "dev_rows",
+          "test_rows",
+          "positive_rate_dev",
+          "positive_rate_test",
+          "n_features",
+          "n_numerical",
+          "n_categorical",
+          "features",
+          "locked"
+        ],
+        "title": "Overview"
+      },
+      "PrivacyItem": {
+        "properties": {
+          "generator": {
+            "type": "string",
+            "title": "Generator"
+          },
+          "seed_size": {
+            "type": "integer",
+            "title": "Seed Size"
+          },
+          "dcr_median_synth": {
+            "type": "number",
+            "title": "Dcr Median Synth"
+          },
+          "dcr_median_holdout": {
+            "type": "number",
+            "title": "Dcr Median Holdout"
+          },
+          "dcr_ratio": {
+            "type": "number",
+            "title": "Dcr Ratio"
+          },
+          "exact_rate_synth": {
+            "type": "number",
+            "title": "Exact Rate Synth"
+          },
+          "exact_rate_holdout": {
+            "type": "number",
+            "title": "Exact Rate Holdout"
+          },
+          "p05_synth": {
+            "type": "number",
+            "title": "P05 Synth"
+          },
+          "p05_holdout": {
+            "type": "number",
+            "title": "P05 Holdout"
+          }
+        },
+        "type": "object",
+        "required": [
+          "generator",
+          "seed_size",
+          "dcr_median_synth",
+          "dcr_median_holdout",
+          "dcr_ratio",
+          "exact_rate_synth",
+          "exact_rate_holdout",
+          "p05_synth",
+          "p05_holdout"
+        ],
+        "title": "PrivacyItem"
+      },
+      "Projection": {
+        "properties": {
+          "real": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Real"
+          },
+          "synthetic": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Synthetic"
+          },
+          "explained_variance": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Explained Variance"
+          }
+        },
+        "type": "object",
+        "required": [
+          "real",
+          "synthetic",
+          "explained_variance"
+        ],
+        "title": "Projection"
+      },
+      "Reference": {
+        "properties": {
+          "trtr_full": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            "type": "object",
+            "title": "Trtr Full"
+          },
+          "random_guess_pr_auc": {
+            "type": "number",
+            "title": "Random Guess Pr Auc"
+          }
+        },
+        "type": "object",
+        "required": [
+          "trtr_full",
+          "random_guess_pr_auc"
+        ],
+        "title": "Reference"
+      },
+      "RuntimeItem": {
+        "properties": {
+          "generator": {
+            "type": "string",
+            "title": "Generator"
+          },
+          "seed_size": {
+            "type": "integer",
+            "title": "Seed Size"
+          },
+          "seconds_mean": {
+            "type": "number",
+            "title": "Seconds Mean"
+          },
+          "seconds_std": {
+            "type": "number",
+            "title": "Seconds Std"
+          }
+        },
+        "type": "object",
+        "required": [
+          "generator",
+          "seed_size",
+          "seconds_mean",
+          "seconds_std"
+        ],
+        "title": "RuntimeItem"
+      },
+      "Seeds": {
+        "properties": {
+          "sizes": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Sizes"
+          },
+          "random_seeds": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Random Seeds"
+          },
+          "nested_ok": {
+            "type": "boolean",
+            "title": "Nested Ok"
+          },
+          "class_counts": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            "type": "object",
+            "title": "Class Counts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sizes",
+          "random_seeds",
+          "nested_ok",
+          "class_counts"
+        ],
+        "title": "Seeds"
+      },
+      "SummaryItem": {
+        "properties": {
+          "arm": {
+            "type": "string",
+            "title": "Arm"
+          },
+          "seed_size": {
+            "type": "integer",
+            "title": "Seed Size"
+          },
+          "metric_means": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Metric Means"
+          },
+          "metric_stds": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Metric Stds"
+          },
+          "n_runs": {
+            "type": "integer",
+            "title": "N Runs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "arm",
+          "seed_size",
+          "metric_means",
+          "metric_stds",
+          "n_runs"
+        ],
+        "title": "SummaryItem"
+      },
+      "Upload": {
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "title": "Dataset Id"
+          },
+          "profile": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Profile"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dataset_id",
+          "profile"
+        ],
+        "title": "Upload"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

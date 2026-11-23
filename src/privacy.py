@@ -37,6 +37,33 @@ import matplotlib.pyplot as plt
 EXACT_MATCH_THRESHOLD = 1e-8  # distances below this count as "exact copy"
 
 
+def compute_dcr_distances(seed_df, synth_df, holdout_df, numerical_cols,
+                          categorical_cols):
+    """
+    Raw DCR distance arrays (used by compute_dcr and by the histogram
+    export in analyze.py). Preprocessing is fitted on the SEED ONLY.
+    Returns (synth_distances, holdout_distances) as numpy arrays.
+    """
+    seed_features = seed_df.drop(columns=["row_id"], errors="ignore")
+    synth_features = synth_df.drop(columns=["row_id"], errors="ignore")
+    holdout_features = holdout_df.drop(columns=["row_id"], errors="ignore")
+
+    preprocessor = ColumnTransformer([
+        ("numerical", StandardScaler(), numerical_cols),
+        ("categorical", OneHotEncoder(handle_unknown="ignore",
+                                      sparse_output=False), categorical_cols),
+    ])
+    seed_transformed = preprocessor.fit_transform(seed_features)
+    synth_transformed = preprocessor.transform(synth_features)
+    holdout_transformed = preprocessor.transform(holdout_features)
+
+    neighbours = NearestNeighbors(n_neighbors=1)
+    neighbours.fit(seed_transformed)
+    synth_distances = neighbours.kneighbors(synth_transformed)[0].flatten()
+    holdout_distances = neighbours.kneighbors(holdout_transformed)[0].flatten()
+    return synth_distances, holdout_distances
+
+
 def compute_dcr(seed_df, synth_df, holdout_df, numerical_cols, categorical_cols):
     """
     Compute DCR of synthetic rows and of holdout rows to the seed.
