@@ -63,7 +63,38 @@ def already_done(metrics_path, random_seed, seed_size, arm, model):
     return mask.any()
 
 
-def run_experiment(quick=False):
+def archive_previous_results():
+    """
+    Archive the previous full-run outputs before a --refresh run, so both the
+    original and the refreshed results are kept for the before/after comparison.
+    Old results CSVs and the CTGAN loss files move to results/archive_v1/; the
+    old synthetic CSVs move to data/synthetic/archive_v1/rs{r}/.
+    """
+    archive = RESULTS_DIR / "archive_v1"
+    if archive.exists():
+        print("results/archive_v1 already exists — leaving prior archive in place.")
+        return
+    archive.mkdir(parents=True, exist_ok=True)
+    for name in ["metrics.csv", "fidelity.csv", "fidelity_per_column.csv",
+                 "privacy.csv", "runtime.csv", "run_config.yaml",
+                 "RESULTS.md", "summary.csv"]:
+        source = RESULTS_DIR / name
+        if source.exists():
+            shutil.move(str(source), archive / name)
+    losses_dir = RESULTS_DIR / "ctgan_losses"
+    if losses_dir.exists():
+        shutil.move(str(losses_dir), archive / "ctgan_losses")
+    synth_root = PROJECT_ROOT / "data" / "synthetic"
+    for rs_dir in sorted(synth_root.glob("rs*")):
+        dest = synth_root / "archive_v1" / rs_dir.name
+        dest.mkdir(parents=True, exist_ok=True)
+        for csv_file in rs_dir.glob("*.csv"):
+            shutil.move(str(csv_file), dest / csv_file.name)
+    print(f"Archived previous full-run results to {archive} and "
+          f"data/synthetic/archive_v1/")
+
+
+def run_experiment(quick=False, refresh=False):
     config = load_config()
 
     # ---- quick mode overrides (a fast smoke test of the whole pipeline) ----
@@ -84,6 +115,12 @@ def run_experiment(quick=False):
         }
         config = quick_config
         results_dir = RESULTS_DIR / "quick"
+    elif refresh:
+        # a --refresh run re-runs the SAME pre-registered pipeline with the
+        # NaN repair active, writing to the standard result locations after
+        # archiving the previous results for the before/after comparison
+        archive_previous_results()
+        results_dir = RESULTS_DIR
     else:
         results_dir = RESULTS_DIR
     results_dir.mkdir(parents=True, exist_ok=True)
@@ -247,8 +284,11 @@ def main():
         description="Run the full synthetic-data experiment.")
     parser.add_argument("--quick", action="store_true",
                         help="fast smoke test using quick_mode settings")
+    parser.add_argument("--refresh", action="store_true",
+                        help="re-run the same pre-registered pipeline with "
+                             "repair_synthetic active, archiving old results")
     args = parser.parse_args()
-    run_experiment(quick=args.quick)
+    run_experiment(quick=args.quick, refresh=args.refresh)
 
 
 if __name__ == "__main__":

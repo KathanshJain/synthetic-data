@@ -20,7 +20,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from src.utils import PROJECT_ROOT, load_config, load_criteria
+from src.utils import PROJECT_ROOT, get_column_types, load_config, load_criteria
 
 RESULTS_DIR = PROJECT_ROOT / "results"
 FIGURES_DIR = PROJECT_ROOT / "figures" / "results"
@@ -301,6 +301,120 @@ def apply_criteria(summary, fidelity_summary, privacy_summary):
     return pass_fail_table, minimum_useful_seed
 
 
+def build_report_facts(config, dev_pool, summary, fidelity_summary,
+                       privacy_summary, runtime_summary, pass_fail_table,
+                       minimum_useful_seed, raw_rows):
+    """
+    Collect every number the written report and the viva need into ONE
+    generated source of truth (reports/report_facts.json): dataset counts,
+    seed design, per-arm metric means/stds, criteria outcomes, runtimes and
+    DCR statistics. Nothing here is hand-written — everything is read from
+    the data files and result CSVs so the report cannot drift from them.
+    """
+    target = config["dataset"]["target"]
+    numerical_cols, categorical_cols = get_column_types(dev_pool, target)
+    features = []
+    for column in dev_pool.columns:
+        if column in (target, "row_id"):
+            continue
+        features.append({
+            "name": column,
+            "type": "numerical" if column in numerical_cols else "categorical",
+            "unique": int(dev_pool[column].nunique()),
+            "missing_pct": round(float(dev_pool[column].isna().mean() * 100), 2),
+        })
+    import json
+    manifest = {}
+    manifest_path = PROJECT_ROOT / "data" / "locked" / "manifest.json"
+    if manifest_path.exists():
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    metric_columns = ["pr_auc", "roc_auc", "f1", "precision", "recall",
+                      "accuracy"]
+    # per-model, per-arm, per-size metric means/stds
+    arms = {}
+    for model_name in summary["model"].unique():
+        model_summary = summary[summary["model"] == model_name]
+        arms[model_name] = {}
+        for arm in model_summary["arm"].unique():
+            arm_summary = model_summary[model_summary["arm"] == arm]
+            arms[model_name][arm] = {
+                int(row["seed_size"]): {
+                    metric: {
+                        "mean": float(row[f"{metric}_mean"]),
+                        "std": (None if pd.isna(row[f"{metric}_std"])
+                                else float(row[f"{metric}_std"])),
+                    }
+                    for metric in metric_columns
+                }
+                for _, row in arm_summary.iterrows()
+            }
+    facts = {
+        "generated": pd.Timestamp.now().isoformat(),
+        "dataset": {
+            "name": config["dataset"]["name"],
+            "version": config["dataset"]["version"],
+            "target": target,
+            "positive_label": config["dataset"]["positive_label"],
+            "rows_raw": int(raw_rows),
+            "rows_clean": int(len(dev_pool) + manifest.get("n_rows", 0)),
+            "duplicates_removed": int(raw_rows - len(dev_pool)
+                                      - manifest.get("n_rows", 0)),
+            "dev_rows": int(len(dev_pool)),
+            "test_rows": int(manifest.get("n_rows", 0)),
+            "positive_rate_dev": round(float(dev_pool[target].mean()), 4),
+            "positive_rate_test": round(
+                float(manifest.get("class_counts", {}).get("1", 0))
+                / max(int(manifest.get("n_rows", 1)), 1), 4),
+            "n_features": len(features),
+            "n_numerical": len(numerical_cols),
+            "n_categorical": len(categorical_cols),
+            "features": features,
+        },
+        "locked": {
+            "sha256": manifest.get("sha256"),
+            "created": manifest.get("created"),
+            "n_rows": manifest.get("n_rows"),
+            "class_counts": manifest.get("class_counts"),
+        },
+        "seed_design": {
+            "seed_sizes": config["seeds"]["seed_sizes"],
+            "random_seeds": config["seeds"]["random_seeds"],
+            "synthetic_rows": config["generators"]["synthetic_rows"],
+            "ctgan_total_training_steps":
+                config["generators"]["ctgan"]["total_training_steps"],
+        },
+        "utility": arms,
+        "criteria": {
+            "rules": criteria_rules(config),
+            "evaluations": (None if pass_fail_table is None or
+                            pass_fail_table.empty
+                            else pass_fail_table.to_dict(orient="records")),
+            "min_useful_seed": minimum_useful_seed,
+        },
+        "fidelity": fidelity_summary.to_dict(orient="records"),
+        "privacy": privacy_summary.to_dict(orient="records"),
+        "runtime": runtime_summary.to_dict(orient="records"),
+    }
+    return facts
+
+
+def criteria_rules(config):
+    """Rule list for reports and the API, derived from criteria.yaml."""
+    criteria = load_criteria()
+    return [
+        {"id": "utility_ratio", "label": "Utility ratio (TSTR/TRTR-full, XGBoost)",
+         "threshold": criteria["utility_ratio_min"], "direction": ">="},
+        {"id": "ks_mean", "label": "Mean KS statistic",
+         "threshold": criteria["ks_mean_max"], "direction": "<="},
+        {"id": "tvd_mean", "label": "Mean TVD",
+         "threshold": criteria["tvd_mean_max"], "direction": "<="},
+        {"id": "dcr_ratio", "label": "DCR ratio (synthetic/holdout median)",
+         "threshold": criteria["dcr_ratio_min"], "direction": ">="},
+        {"id": "exact_copy", "label": "No extra exact copies vs holdout",
+         "threshold": 0, "direction": "synth<=holdout"},
+    ]
+
+
 def write_results_md(summary, fidelity_summary, privacy_summary, runtime_summary,
                      pass_fail_table, minimum_useful_seed, findings):
     """Write results/RESULTS.md with tables, pass/fail and findings."""
@@ -439,6 +553,20 @@ def main():
                      findings)
 
     summary.to_csv(RESULTS_DIR / "summary.csv", index=False)
+
+    # one generated source of truth for every number the report/viva need
+    # (test-set counts come from the manifest — the locked CSV is not read here)
+    raw_df = pd.read_csv(PROJECT_ROOT / "data" / "raw" / "adult.csv")
+    facts = build_report_facts(config, dev_pool, summary,
+                               fidelity_summary, privacy_summary,
+                               runtime_summary, pass_fail_table,
+                               minimum_useful_seed, len(raw_df))
+    reports_dir = PROJECT_ROOT / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    import json
+    with open(reports_dir / "report_facts.json", "w", encoding="utf-8") as f:
+        json.dump(facts, f, indent=2, default=str)
+    print(f"Report facts written to {reports_dir / 'report_facts.json'}")
 
     print("=== Pass/Fail table ===")
     print(pass_fail_table.to_string(index=False))

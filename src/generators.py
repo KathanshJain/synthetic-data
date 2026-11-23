@@ -85,15 +85,18 @@ def train_ctgan(seed_df, config, random_state):
     synthesizer.fit({"data": seed_df.drop(columns=["row_id"])})
     training_seconds = time.time() - start_time
 
-    # loss values, if the underlying CTGAN exposed them
+    # loss values via the SDV 2.x accessor; named per run so the API can
+    # serve the loss curve for a given (random seed, seed size) later
     losses = None
-    loss_values = getattr(synthesizer, "loss_values", None)
-    if loss_values is not None:
-        losses = loss_values
+    try:
+        losses = synthesizer.get_loss_values()
+    except Exception:
+        losses = None
+    if losses is not None:
         losses_dir = PROJECT_ROOT / "results" / "ctgan_losses"
         losses_dir.mkdir(parents=True, exist_ok=True)
-        losses.to_csv(losses_dir /
-                      f"ctgan_losses_{int(time.time())}.csv", index=False)
+        losses.to_csv(losses_dir / f"ctgan_losses_rs{random_state}_n{len(seed_df)}.csv",
+                      index=False)
     return synthesizer, training_seconds, losses
 
 

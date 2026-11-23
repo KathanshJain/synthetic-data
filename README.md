@@ -105,8 +105,9 @@ results with the fix applied.
 | 7. Models demo | `python -m src.models` | validation metrics (no locked test!) |
 | 8. Quick experiment | `python -m src.run_experiment --quick` | results/quick/* |
 | 8b. Full experiment | `python -m src.run_experiment` | results/*.csv (ONLY after approval) |
-| 8c. Backfill per-column fidelity | `python -m src.backfill_fidelity_per_column` | results/fidelity_per_column.csv |
-| 9. Analysis | `python -m src.analyze` | figures/results/, results/RESULTS.md |
+| 8c. Refresh (re-run with NaN repair) | `python -m src.run_experiment --refresh` | archives old results to results/archive_v1/, re-runs same pipeline |
+| 8d. Backfill per-column fidelity | `python -m src.backfill_fidelity_per_column` | results/fidelity_per_column.csv |
+| 9. Analysis | `python -m src.analyze` | figures/results/, results/RESULTS.md, reports/report_facts.json |
 | 10. Web app | `cd frontend/web && npm run dev` | local web app (React + Vite) |
 | Tests | `python -m pytest` | test report |
 
