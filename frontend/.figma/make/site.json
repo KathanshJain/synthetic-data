@@ -1,0 +1,10 @@
+{
+  "description": "Explore how synthetic tabular data performs on machine learning, compare fidelity and privacy, and test data generation with interactive research tools.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

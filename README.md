@@ -47,7 +47,7 @@ Gaussian Copula, using the Adult Census Income dataset?
  [9] Analysis: mean+-std, plots, criteria.yaml -> minimum useful seed
         |
         v
- [10] Streamlit app (About | Results | Try It Yourself)
+ [10] React web app (frontend/web): story | results | try-it-yourself
 ```
 
 ## Folder Structure
@@ -64,7 +64,7 @@ synthetic-data-project/
   data/seeds/            nested stratified seeds per random seed
   data/synthetic/        generated synthetic CSVs
   src/                   all pipeline code
-  app/                   Streamlit app
+  frontend/web/          React web app (Vite + TypeScript)
   tests/                 pytest tests (split, seeds, fidelity, leakage)
   results/               metrics.csv, fidelity.csv, privacy.csv, RESULTS.md
   figures/               all plots
@@ -107,7 +107,7 @@ results with the fix applied.
 | 8b. Full experiment | `python -m src.run_experiment` | results/*.csv (ONLY after approval) |
 | 8c. Backfill per-column fidelity | `python -m src.backfill_fidelity_per_column` | results/fidelity_per_column.csv |
 | 9. Analysis | `python -m src.analyze` | figures/results/, results/RESULTS.md |
-| 10. App | `streamlit run app/streamlit_app.py` | local web app |
+| 10. Web app | `cd frontend/web && npm run dev` | local web app (React + Vite) |
 | Tests | `python -m pytest` | test report |
 
 ## Results (full experiment: 3 random seeds × 5 seed sizes, locked test set)
