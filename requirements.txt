@@ -1,0 +1,14 @@
+# Python libraries for the project.
+# "reasonable recent versions" — installed with pip inside a virtual environment.
+pandas>=2.2
+numpy>=1.26
+scikit-learn>=1.4
+xgboost>=2.0
+imbalanced-learn>=0.12
+sdv>=1.15
+scipy>=1.11
+matplotlib>=3.8
+seaborn>=0.13
+streamlit>=1.35
+pyyaml>=6.0
+pytest>=8.0

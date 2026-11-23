@@ -1,0 +1,47 @@
+# config.yaml — every setting for the whole project lives here.
+# No hard-coded numbers in the code: everything is read from this file.
+
+dataset:
+  name: adult            # OpenML dataset name
+  version: 2             # OpenML dataset version
+  target: income         # name of the target column we create
+  positive_label: ">50K" # which raw value counts as the "positive" class
+  drop_columns:          # columns we remove during cleaning
+    - fnlwgt             # census survey weight, not a personal predictor
+    - education          # redundant with education-num (its numeric encoding)
+
+split:
+  test_size: 0.2         # 20% of rows become the locked test set
+  random_state: 42       # fixed seed so the split is reproducible
+
+seeds:
+  seed_sizes: [100, 250, 500, 1000, 2000]  # sizes of the small real samples
+  random_seeds: [0, 1, 2]                  # repetitions of the whole experiment
+
+generators:
+  synthetic_rows: 5000   # every generator produces this many rows
+
+  ctgan:
+    total_training_steps: 3000   # same budget for every seed size (fairness)
+    batch_size: 500
+    use_gpu: false               # keep it simple and laptop-friendly
+
+  smote:
+    k_neighbors: 5               # neighbours used by SMOTE-NC (auto-capped for tiny seeds)
+
+models:
+  random_forest:
+    n_estimators: 300
+  xgboost:
+    n_estimators: 300
+    max_depth: 6
+    learning_rate: 0.1
+
+dcr:
+  holdout_size: 1000     # real dev-pool rows held out to form the DCR baseline
+
+quick_mode:             # a fast smoke-test of the full pipeline
+  seed_sizes: [100, 500]
+  random_seeds: [0]
+  ctgan_total_training_steps: 200
+  synthetic_rows: 1000

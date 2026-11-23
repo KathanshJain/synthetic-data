@@ -1,0 +1,28 @@
+# criteria.yaml — the pass/fail rules for "minimum useful seed".
+#
+# IMPORTANT: these thresholds were fixed BEFORE the full experiment ran.
+# They are committed to Git first so we cannot (and do not) tune them after
+# peeking at locked-test results. They are project-specific operating rules,
+# not universal laws of synthetic data.
+
+# UTILITY RULE: a synthetic-trained model (TSTR) should keep at least 90% of
+# the performance of the same model trained on the full real dev pool.
+# Measured with XGBoost, primary metric PR-AUC:
+#   mean TSTR PR-AUC / mean TRTR-full PR-AUC >= 0.90
+utility_ratio_min: 0.90
+
+# FIDELITY RULES: how closely the synthetic columns copy the real
+# distributions (lower = more faithful).
+ks_mean_max: 0.10    # mean KS statistic over numerical columns
+tvd_mean_max: 0.10   # mean Total Variation Distance over categorical columns
+
+# PRIVACY RULE: synthetic rows must not sit unusually close to the real seed.
+# dcr_ratio = median synthetic DCR / median holdout DCR.
+# If synthetic rows were memorised copies, this ratio would drop well below 1.
+# We require at least 0.80 of the "genuine new record" distance.
+dcr_ratio_min: 0.80
+
+# EXACT-COPY RULE: the share of synthetic rows that exactly match a seed row
+# must not exceed the share of genuine holdout rows that exactly match a seed
+# row (real people can naturally share identical values on these columns).
+exact_copy_rule: synthetic exact-match rate must not exceed the holdout exact-match rate

@@ -1,0 +1,31 @@
+# Virtual environment
+venv/
+.venv/
+
+# Python build artifacts
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Large / regenerable data files
+data/raw/
+data/synthetic/
+data/locked/*.csv
+data/processed/*.csv
+data/seeds/
+*.csv
+
+# BUT keep the lock manifest in Git (it is tiny and proves integrity)
+!data/locked/manifest.json
+
+# Results can be large; keep the small summary files
+results/quick/
+results/ctgan_losses/
+results/*.csv
+
+# Figures are regenerable
+figures/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
