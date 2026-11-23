@@ -1,0 +1,47 @@
+dataset:
+  drop_columns:
+  - fnlwgt
+  - education
+  name: adult
+  positive_label: '>50K'
+  target: income
+  version: 2
+dcr:
+  holdout_size: 1000
+generators:
+  ctgan:
+    batch_size: 500
+    total_training_steps: 3000
+    use_gpu: false
+  smote:
+    k_neighbors: 5
+  synthetic_rows: 5000
+models:
+  random_forest:
+    n_estimators: 300
+  xgboost:
+    learning_rate: 0.1
+    max_depth: 6
+    n_estimators: 300
+quick_mode:
+  ctgan_total_training_steps: 200
+  random_seeds:
+  - 0
+  seed_sizes:
+  - 100
+  - 500
+  synthetic_rows: 1000
+seeds:
+  random_seeds:
+  - 0
+  - 1
+  - 2
+  seed_sizes:
+  - 100
+  - 250
+  - 500
+  - 1000
+  - 2000
+split:
+  random_state: 42
+  test_size: 0.2

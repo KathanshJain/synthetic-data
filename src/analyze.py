@@ -46,12 +46,18 @@ def build_summary(metrics, fidelity, privacy, runtime):
     summary.columns = ["_".join(col).strip() for col in summary.columns]
     summary = summary.reset_index()
 
-    fidelity_summary = (fidelity.groupby(["seed_size", "generator"])
-                        .agg(["mean", "std"]).round(4).reset_index())
-    privacy_summary = (privacy.groupby(["seed_size", "generator"])
-                       .agg(["mean", "std"]).round(4).reset_index())
-    runtime_summary = (runtime.groupby(["seed_size", "generator"])
-                       .agg(["mean", "std"]).round(1).reset_index())
+    def flatten(frame):
+        """Turn the (metric, mean/std) MultiIndex columns into flat names."""
+        frame.columns = ["_".join(col).strip() if isinstance(col, tuple)
+                         else col for col in frame.columns]
+        return frame.reset_index()
+
+    fidelity_summary = flatten(
+        fidelity.groupby(["seed_size", "generator"]).agg(["mean", "std"]).round(4))
+    privacy_summary = flatten(
+        privacy.groupby(["seed_size", "generator"]).agg(["mean", "std"]).round(4))
+    runtime_summary = flatten(
+        runtime.groupby(["seed_size", "generator"]).agg(["mean", "std"]).round(1))
     return summary, fidelity_summary, privacy_summary, runtime_summary
 
 

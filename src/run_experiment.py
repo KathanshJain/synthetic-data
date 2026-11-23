@@ -195,14 +195,17 @@ def run_experiment(quick=False):
                     print(f"    WARNING: {warning}")
 
                 # fidelity vs dev pool
-                _, fidelity_summary = evaluate_fidelity(
+                per_column_table, fidelity_summary = evaluate_fidelity(
                     dev_pool, synth_df, numerical_cols, categorical_cols)
                 append_row(fidelity_path, {
                     "random_seed": random_seed, "seed_size": seed_size,
                     "generator": generator_name, **fidelity_summary})
-                append_row(fidelity_per_column_path, {
-                    "random_seed": random_seed, "seed_size": seed_size,
-                    "generator": generator_name, **fidelity_summary})
+                # per-column values get one row per column
+                for column_name, column_row in per_column_table.iterrows():
+                    append_row(fidelity_per_column_path, {
+                        "random_seed": random_seed, "seed_size": seed_size,
+                        "generator": generator_name,
+                        "column": column_name, **column_row.to_dict()})
 
                 # privacy (DCR)
                 dcr = compute_dcr(seed_df, synth_df, holdout,

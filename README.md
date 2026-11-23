@@ -79,6 +79,11 @@ venv\Scripts\activate            # Windows
 pip install -r requirements.txt
 ```
 
+Note: developed and tested on Python 3.14 with **SDV 2.2** (its API takes a
+`{table_name: DataFrame}` dict in `fit()` and returns one from `sample()`;
+CTGAN uses `enable_gpu=...`). CTGAN may emit NaN for very rare categories
+(workclass, occupation, native-country) — flagged by `validate_synthetic()`.
+
 ## How to Run Each Step
 
 | Step | Command | Produces |
@@ -92,13 +97,39 @@ pip install -r requirements.txt
 | 7. Models demo | `python -m src.models` | validation metrics (no locked test!) |
 | 8. Quick experiment | `python -m src.run_experiment --quick` | results/quick/* |
 | 8b. Full experiment | `python -m src.run_experiment` | results/*.csv (ONLY after approval) |
+| 8c. Backfill per-column fidelity | `python -m src.backfill_fidelity_per_column` | results/fidelity_per_column.csv |
 | 9. Analysis | `python -m src.analyze` | figures/results/, results/RESULTS.md |
 | 10. App | `streamlit run app/streamlit_app.py` | local web app |
 | Tests | `python -m pytest` | test report |
 
-## Results
+## Results (full experiment: 3 random seeds × 5 seed sizes, locked test set)
 
-*(filled in after the experiment runs)*
+Reference: **TRTR-full XGBoost PR-AUC = 0.823** on the locked test set.
+
+| Seed size | TRTR-seed | SMOTE-NC | TSTR-CTGAN | TSTR-GC |
+|---|---|---|---|---|
+| 100 | 0.591 | 0.574 | 0.563 | 0.350 |
+| 250 | 0.643 | 0.635 | 0.633 | 0.469 |
+| 500 | 0.699 | 0.690 | 0.648 | 0.409 |
+| 1000 | 0.733 | 0.721 | 0.619 | 0.406 |
+| 2000 | 0.761 | 0.753 | 0.648 | 0.476 |
+
+(XGBoost PR-AUC, mean over random seeds 0/1/2. Full tables: `results/RESULTS.md`.)
+
+**Key findings (honest):**
+- **No tested seed size passed all frozen criteria** — the utility ratio peaked at
+  0.79 (CTGAN, 500/2000 rows) against the 0.90 threshold, and mean KS stayed at
+  0.22–0.29 against the 0.10 limit. Reported as a valid experimental finding.
+- CTGAN clearly beats the Gaussian Copula on utility (0.56–0.65 vs 0.35–0.48)
+  and fidelity (mean KS 0.22 vs 0.40).
+- TSTR never beat TRTR-seed: on this dataset, training on the small real sample
+  itself remained the better small-data choice.
+- **No memorisation warning**: every DCR ratio was ≥ 1.0 (synthetic rows sit
+  farther from the seed than genuine holdout rows) and exact-copy rates were ~0.
+- Privacy, in other words, was never the failure mode — fidelity and utility were.
+
+Key figures: `figures/results/pr_auc_xgboost.png`, `fidelity_vs_seed_size.png`,
+`dcr_ratio_vs_seed_size.png`, `real_vs_synth_*.png`.
 
 ## Limitations
 
