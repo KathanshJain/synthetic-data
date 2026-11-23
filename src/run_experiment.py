@@ -22,6 +22,7 @@ from sklearn.model_selection import train_test_split
 from src.fidelity import evaluate_fidelity
 from src.generators import (
     generate,
+    repair_synthetic,
     run_smote_nc,
     train_ctgan,
     train_gaussian_copula,
@@ -180,6 +181,9 @@ def run_experiment(quick=False):
 
                 synth_df, sample_seconds = generate(
                     synthesizer, config["generators"]["synthetic_rows"])
+                # fill NaNs the generator left in rare categorical columns
+                synth_df = repair_synthetic(synth_df, seed_df,
+                                            numerical_cols, categorical_cols)
 
                 # save the synthetic data
                 synth_dir = PROJECT_ROOT / "data" / "synthetic" / f"rs{random_seed}"

@@ -84,6 +84,14 @@ Note: developed and tested on Python 3.14 with **SDV 2.2** (its API takes a
 CTGAN uses `enable_gpu=...`). CTGAN may emit NaN for very rare categories
 (workclass, occupation, native-country) — flagged by `validate_synthetic()`.
 
+**Data-quality caveat on the reported results:** the full experiment was run
+*before* the NaN-repair step (`repair_synthetic()` in src/generators.py) was
+added, so the saved synthetic CSVs contain some NaN rows in rare categorical
+columns and the reported TSTR metrics are therefore slightly pessimistic.
+Current code repairs these NaNs by sampling from the real category
+distribution; re-running `python -m src.run_experiment` would refresh all
+results with the fix applied.
+
 ## How to Run Each Step
 
 | Step | Command | Produces |

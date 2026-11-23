@@ -161,6 +161,34 @@ def run_smote_nc(seed_df, numerical_cols, categorical_cols, target,
     return resampled, n_new_rows
 
 
+def repair_synthetic(synth_df, real_df, numerical_cols, categorical_cols):
+    """
+    Fix the NaNs a generator can leave behind.
+
+    Why this exists: SDV 2.x sometimes samples NaN for RARE categories
+    (e.g. tiny native-country values) instead of a real category. Leaving
+    NaNs in the output would (a) trip the validation warnings and (b) hand
+    downstream models rows with unknown categories.
+
+    The repair is faithful to the real data: each missing categorical value
+    is filled by RANDOMLY SAMPLING from the real column's category
+    distribution (so proportions are preserved), and missing numerical
+    values get the real median.
+    """
+    synth_df = synth_df.copy()
+    rng = np.random.default_rng(0)
+    for column in categorical_cols:
+        if column in synth_df.columns and synth_df[column].isna().any():
+            real_values = real_df[column].dropna().to_numpy()
+            n_missing = int(synth_df[column].isna().sum())
+            synth_df.loc[synth_df[column].isna(), column] = \
+                rng.choice(real_values, size=n_missing)
+    for column in numerical_cols:
+        if column in synth_df.columns and synth_df[column].isna().any():
+            synth_df[column] = synth_df[column].fillna(real_df[column].median())
+    return synth_df
+
+
 def validate_synthetic(synth_df, real_df, numerical_cols, categorical_cols):
     """
     Basic sanity checks on synthetic data. Returns a list of warnings:
@@ -219,12 +247,16 @@ def main():
     ctgan_synth, ctgan_seconds, _ = train_ctgan(seed_df, quick_config, 0)
     ctgan_rows, ctgan_sample_seconds = generate(
         ctgan_synth, config["quick_mode"]["synthetic_rows"])
+    ctgan_rows = repair_synthetic(ctgan_rows, seed_df,
+                                  numerical_cols, categorical_cols)
     print(f"CTGAN done in {ctgan_seconds:.1f}s, "
           f"sampled {len(ctgan_rows)} rows in {ctgan_sample_seconds:.1f}s")
 
     print("Training Gaussian Copula...")
     gc_synth, gc_seconds = train_gaussian_copula(seed_df, config, 0)
     gc_rows, _ = generate(gc_synth, config["quick_mode"]["synthetic_rows"])
+    gc_rows = repair_synthetic(gc_rows, seed_df,
+                               numerical_cols, categorical_cols)
     print(f"Gaussian Copula done in {gc_seconds:.1f}s")
 
     # save the demo outputs so the fidelity/privacy demos can reuse them

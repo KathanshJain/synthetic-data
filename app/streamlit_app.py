@@ -18,6 +18,7 @@ from src.eda import profile_dataset
 from src.fidelity import evaluate_fidelity, plot_real_vs_synthetic
 from src.generators import (
     generate,
+    repair_synthetic,
     run_smote_nc,
     train_ctgan,
     train_gaussian_copula,
@@ -209,6 +210,9 @@ def tab_try_it_yourself():
             else:
                 synthesizer, _ = train_gaussian_copula(seed_df, config, 0)
                 synthetic_df, _ = generate(synthesizer, int(n_synth_rows))
+            # fill NaNs the generator left in rare categorical columns
+            synthetic_df = repair_synthetic(synthetic_df, seed_df,
+                                            numerical_cols, categorical_cols)
 
         # ---- results ----
         st.subheader("3. Results")
