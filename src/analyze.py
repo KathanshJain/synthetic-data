@@ -231,6 +231,36 @@ def plot_ctgan_loss_curve(results_dir, save_dir):
     plt.close(fig)
 
 
+def build_refresh_comparison():
+    """
+    Before/after comparison when a --refresh run has archived the original
+    results to results/archive_v1/. Compares XGBoost PR-AUC (and F1) means
+    by (seed_size, arm) between the archived (v1) and refreshed results.
+    Returns a DataFrame, or None if no archive exists.
+    """
+    archive_metrics_path = RESULTS_DIR / "archive_v1" / "metrics.csv"
+    if not archive_metrics_path.exists() or not (RESULTS_DIR / "metrics.csv").exists():
+        return None
+    old = pd.read_csv(archive_metrics_path)
+    new = pd.read_csv(RESULTS_DIR / "metrics.csv")
+
+    def arm_means(metrics, label):
+        xgb = metrics[metrics["model"] == "xgboost"]
+        grouped = (xgb.groupby(["seed_size", "arm"])["pr_auc"]
+                   .agg(["mean", "std"]).round(4).reset_index())
+        grouped.columns = ["seed_size", "arm",
+                           f"pr_auc_mean_{label}", f"pr_auc_std_{label}"]
+        return grouped
+
+    comparison = arm_means(old, "v1").merge(
+        arm_means(new, "refreshed"), on=["seed_size", "arm"],
+        how="outer")
+    comparison["pr_auc_change"] = (
+        comparison["pr_auc_mean_refreshed"] - comparison["pr_auc_mean_v1"]
+    ).round(4)
+    return comparison
+
+
 def apply_criteria(summary, fidelity_summary, privacy_summary):
     """
     Apply the FROZEN criteria.yaml rules per generator and seed size.
@@ -416,7 +446,8 @@ def criteria_rules(config):
 
 
 def write_results_md(summary, fidelity_summary, privacy_summary, runtime_summary,
-                     pass_fail_table, minimum_useful_seed, findings):
+                     pass_fail_table, minimum_useful_seed, findings,
+                     refresh_comparison=None):
     """Write results/RESULTS.md with tables, pass/fail and findings."""
     lines = ["# Experiment Results", ""]
     lines.append("## Utility summary (mean ± std over random seeds)")
@@ -442,6 +473,22 @@ def write_results_md(summary, fidelity_summary, privacy_summary, runtime_summary
     lines.append("")
     lines.append("## Findings")
     lines.extend(f"- {f}" for f in findings)
+    if refresh_comparison is not None and not refresh_comparison.empty:
+        lines.append("")
+        lines.append("## Before/after comparison (v1 archive vs NaN-repaired refresh)")
+        lines.append("XGBoost PR-AUC means by (seed size, arm). The v1 run predated "
+                     "the NaN repair; the refreshed run re-ran the SAME pre-registered "
+                     "pipeline with repair_synthetic active.")
+        lines.append(refresh_comparison.to_markdown(index=False))
+        changed = (refresh_comparison["pr_auc_change"].abs() > 0.01).any()
+        if changed:
+            lines.append("")
+            lines.append("_At least one arm moved by more than 0.01 PR-AUC — see the "
+                         "table above for where conclusions may shift._")
+        else:
+            lines.append("")
+            lines.append("_No arm moved by more than 0.01 PR-AUC — the conclusions "
+                         "do not change after the NaN repair._")
     (RESULTS_DIR / "RESULTS.md").write_text("\n".join(lines), encoding="utf-8")
 
 
@@ -548,9 +595,10 @@ def main():
         summary, fidelity_summary, privacy_summary)
     findings = make_findings(summary, fidelity_summary, privacy_summary,
                              pass_fail_table, minimum_useful_seed)
+    refresh_comparison = build_refresh_comparison()
     write_results_md(summary, fidelity_summary, privacy_summary,
                      runtime_summary, pass_fail_table, minimum_useful_seed,
-                     findings)
+                     findings, refresh_comparison)
 
     summary.to_csv(RESULTS_DIR / "summary.csv", index=False)
 
