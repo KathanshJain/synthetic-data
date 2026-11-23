@@ -97,7 +97,7 @@ def tab_results():
     col1, col2 = st.columns(2)
     model = col1.selectbox("Model", ["xgboost", "random_forest"])
     arm = col2.selectbox("Arm", ["TRTR-full", "TRTR-seed", "SMOTE-NC",
-                                 "TSTR-CTGAN", "TSTR-GC"])
+                                 "TSTR-CTGAN", "TSTR-GaussianCopula"])
 
     filtered = summary[(summary["model"] == model) & (summary["arm"] == arm)]
     st.dataframe(filtered, use_container_width=True)
