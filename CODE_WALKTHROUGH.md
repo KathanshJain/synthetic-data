@@ -72,7 +72,8 @@ importantly — the guarded loader for the locked test set.
 ## src/eda.py — Step 2: exploratory data analysis
 
 **What it does:** profiles the dev pool and produces all EDA figures and a
-Markdown report. `profile_dataset()` is reused by the Streamlit app.
+Markdown report. `profile_dataset()` is reused by the web app's upload
+profiling.
 
 **Key functions**
 | Function | Input | Output |
@@ -284,15 +285,21 @@ metrics.csv).
 
 ---
 
-## app/streamlit_app.py — Step 11: the demo app
+## frontend/web — the React web app (presentation layer)
 
-**Key functions:** `tab_about()`, `tab_results()`, `tab_try_it_yourself()`;
-reuses `profile_dataset`, generators, fidelity and DCR from src/ — no
-duplicated logic. The Try-It tab never reads the locked test set.
+The Streamlit demo app was removed; the React app in `frontend/web` is the
+only UI. It is a Vite + React + TypeScript single-page app that talks to the
+backend through the API contract in `src/api/client.ts` and
+`src/api/types.ts` (with mock fixtures in `src/mocks/fixtures.ts` for
+backend-free demos). Its sections map to the pipeline: story, data snapshot,
+utility, fidelity/privacy studios, criteria, runtime, and the interactive
+lab. All heavy lifting (profiling, generation, fidelity, DCR) still happens
+in `src/` — the frontend only renders and requests.
 
 **Viva questions**
-1. *Q: What does st.cache_data do?* A: Caches a function's result so repeated
-   interactions do not recompute it.
-2. *Q: Why refuse tiny uploads?* A: Below ~50 rows (or <10 minority rows)
-   no generator can learn anything meaningful; the app says so instead of
-   producing garbage.
+1. *Q: Why a separate frontend?* A: It separates presentation from the
+   computation pipeline; the same src/ functions serve both the batch
+   experiment and interactive use, so numbers cannot drift between them.
+2. *Q: What are the mock fixtures for?* A: They let the UI run without the
+   backend (mock mode), which separates frontend development from backend
+   availability and makes the API contract explicit.
