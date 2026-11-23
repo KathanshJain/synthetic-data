@@ -29,3 +29,5 @@ figures/
 # OS / editor noise
 .DS_Store
 Thumbs.db
+*.pid
+*.log
