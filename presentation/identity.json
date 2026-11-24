@@ -1,0 +1,14 @@
+{
+  "title": "Machine Learning on Artificially Forged Data",
+  "team": [
+    {"name": "Aryan Gupta", "id": "S24CSEU2654"},
+    {"name": "Kathansh Jain", "id": "S24CSEU2656"}
+  ],
+  "course": "CSET312",
+  "mentor": "Dr. Akhil Kumar",
+  "university": "Bennett University",
+  "identity_source": "Presentation brief and submitted course report",
+  "logo_source": "Bennett University logo extracted from the submitted course report",
+  "logo_blue": "#0C4DA2",
+  "logo_red": "#DA2032"
+}
